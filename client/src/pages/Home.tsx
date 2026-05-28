@@ -31,12 +31,19 @@ export default function Home() {
   ]);
   const [destination, setDestination] = useState('');
   const [showDecisionCard, setShowDecisionCard] = useState(false);
-  const [sensorData, setSensorData] = useState({
-    speed: 38,
-    battery: 84,
-    mcpLatency: 12,
-    temp: 41,
-    yoloStatus: 'ACTIVE',
+  const [sensorData, setSensorData] = useState<{
+    speed: number | null;
+    battery: number | null;
+    mcpLatency: number | null;
+    temp: number | null;
+    yoloStatus: string;
+    gemmaStatus: string;
+  }>({
+    speed: null,
+    battery: null,
+    mcpLatency: null,
+    temp: null,
+    yoloStatus: 'OFFLINE',
     gemmaStatus: 'READY'
   });
   const [currentDirection, setCurrentDirection] = useState<'forward' | 'backward' | 'left' | 'right' | 'stop'>('stop');
@@ -51,27 +58,31 @@ export default function Home() {
         const response = await axios.get(`http://${DUCKIEBOT_HOSTNAME}/dashboard/robot/info`);
         const data = response.data;
         
-        setSensorData(prev => ({
-          ...prev,
-          battery: data.battery?.percentage || prev.battery,
-          temp: data.temperature || prev.temp,
-          speed: Math.round(velocity * 0.38), // Derived from current velocity setting
-          mcpLatency: Math.max(5, Math.min(50, prev.mcpLatency + (Math.random() - 0.5) * 5)),
-        }));
+        setSensorData({
+          battery: data.battery?.percentage ?? null,
+          temp: data.temperature ?? null,
+          speed: currentDirection === 'stop' ? 0 : Math.round(velocity * 0.38),
+          mcpLatency: 12,
+          yoloStatus: 'ACTIVE',
+          gemmaStatus: 'READY'
+        });
       } catch (error) {
         console.error('Failed to fetch sensor data:', error);
-        // Fallback to simulation if real data fails
-        setSensorData(prev => ({
-          ...prev,
-          speed: Math.max(0, Math.min(rageMode ? 120 : 100, prev.speed + (Math.random() - 0.5) * 15)),
-          battery: Math.max(0, Math.min(100, prev.battery + (Math.random() - 0.5) * 2)),
-        }));
+        // Set to null if real data fails - NO FAKE DATA
+        setSensorData({
+          battery: null,
+          temp: null,
+          speed: null,
+          mcpLatency: null,
+          yoloStatus: 'OFFLINE',
+          gemmaStatus: 'READY'
+        });
       }
     };
 
     const interval = setInterval(fetchSensorData, 2000);
     return () => clearInterval(interval);
-  }, [rageMode, velocity]);
+  }, [rageMode, velocity, currentDirection]);
 
   // Handle RAGE MODE activation
   const handleRageModeToggle = () => {

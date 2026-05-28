@@ -1,8 +1,8 @@
 interface SensorData {
-  speed: number;
-  battery: number;
-  mcpLatency: number;
-  temp: number;
+  speed: number | null;
+  battery: number | null;
+  mcpLatency: number | null;
+  temp: number | null;
   yoloStatus: string;
   gemmaStatus: string;
 }
@@ -31,10 +31,10 @@ export default function BottomBar({ sensorData, rageMode }: BottomBarProps) {
     return 'CRIT';
   };
 
-  const speedColor = getStatusColor(sensorData.speed, { ok: 40, warning: 70 });
-  const batteryColor = getStatusColor(100 - sensorData.battery, { ok: 20, warning: 40 });
-  const tempColor = getStatusColor(sensorData.temp, { ok: 50, warning: 65 });
-  const mcpConnected = sensorData.mcpLatency < 100;
+  const speedColor = sensorData.speed !== null ? getStatusColor(sensorData.speed, { ok: 40, warning: 70 }) : '#666666';
+  const batteryColor = sensorData.battery !== null ? getStatusColor(100 - sensorData.battery, { ok: 20, warning: 40 }) : '#666666';
+  const tempColor = sensorData.temp !== null ? getStatusColor(sensorData.temp, { ok: 50, warning: 65 }) : '#666666';
+  const mcpConnected = sensorData.mcpLatency !== null && sensorData.mcpLatency < 100;
 
   return (
     <div
@@ -49,7 +49,7 @@ export default function BottomBar({ sensorData, rageMode }: BottomBarProps) {
       <div className="sensor-tile min-w-fit">
         <div className="sensor-label">SPEED</div>
         <div className="sensor-value" style={{ color: speedColor }}>
-          {Math.round(sensorData.speed * 0.38)} cm/s
+          {sensorData.speed !== null ? `${Math.round(sensorData.speed * 0.38)} cm/s` : '---'}
         </div>
       </div>
 
@@ -57,7 +57,7 @@ export default function BottomBar({ sensorData, rageMode }: BottomBarProps) {
       <div className="sensor-tile min-w-fit">
         <div className="sensor-label">BATTERY</div>
         <div className="sensor-value" style={{ color: batteryColor }}>
-          {Math.round(sensorData.battery)}%
+          {sensorData.battery !== null ? `${Math.round(sensorData.battery)}%` : 'UNBEKANNT'}
         </div>
       </div>
 
@@ -82,7 +82,7 @@ export default function BottomBar({ sensorData, rageMode }: BottomBarProps) {
       <div className="sensor-tile min-w-fit">
         <div className="sensor-label">TEMP</div>
         <div className="sensor-value" style={{ color: tempColor }}>
-          {Math.round(sensorData.temp)}°C
+          {sensorData.temp !== null ? `${Math.round(sensorData.temp)}°C` : '---'}
         </div>
       </div>
 

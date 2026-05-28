@@ -4,8 +4,8 @@ import { DUCKIEBOT_IP, DUCKIEBOT_HOSTNAME } from '@shared/const';
 interface CenterPanelProps {
   rageMode: boolean;
   mode: 'autonomous' | 'human-loop' | 'rage';
-  velocity: number;
-  mcpLatency: number;
+  velocity: number | null;
+  mcpLatency: number | null;
 }
 
 /**
@@ -185,7 +185,7 @@ export default function CenterPanel({
             <div className="flex flex-col">
               <span className="text-xs mono-display text-[#666666]">SPEED</span>
               <span className="text-lg font-bold mono-display text-[#FFD000]">
-                {Math.round(velocity * 0.38)} cm/s
+                {velocity !== null ? `${Math.round(velocity * 0.38)} cm/s` : '---'}
               </span>
             </div>
 
@@ -193,7 +193,7 @@ export default function CenterPanel({
             <div className="flex flex-col items-end">
               <span className="text-xs mono-display text-[#666666]">LATENCY</span>
               <span className="text-lg font-bold mono-display text-[#FFD000]">
-                MCP {Math.round(mcpLatency)}ms
+                MCP {mcpLatency !== null ? `${Math.round(mcpLatency)}ms` : 'OFFLINE'}
               </span>
             </div>
           </div>
