@@ -48,6 +48,7 @@ export default function Home() {
   });
   const [currentDirection, setCurrentDirection] = useState<'forward' | 'backward' | 'left' | 'right' | 'stop'>('stop');
   const [rawData, setRawData] = useState<string>("");
+  const [composeToken, setComposeToken] = useState<string | null>(null);
   const bodyRef = useRef<HTMLDivElement>(null);
   const rageIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -55,51 +56,66 @@ export default function Home() {
   useEffect(() => {
     const fetchSensorData = async () => {
       try {
-        // Try to fetch JSON data from the API endpoint
-        // Based on Duckietown Compose, the API is often under /api/1.0/
-        const response = await axios.get(`/duckiebot-api/api/1.0/robot/info`, { timeout: 2000 });
-        const data = response.data;
-        setRawData(JSON.stringify(data, null, 2));
-        
-        // Recursive search for values in the object
-        const findValue = (obj: any, keys: string[]): any => {
-          if (!obj || typeof obj !== 'object') return undefined;
-          for (const key in obj) {
-            if (keys.includes(key.toLowerCase())) return obj[key];
-            if (typeof obj[key] === 'object') {
-              const found = findValue(obj[key], keys);
-              if (found !== undefined) return found;
-            }
+        // 1. Try to get the token if we don't have it
+        let currentToken = composeToken;
+        if (!currentToken) {
+          const pageResp = await axios.get(`/duckiebot-api/dashboard/robot/info`, { timeout: 2000 });
+          const match = pageResp.data.match(/window\.COMPOSE_TOKEN\s*=\s*["']([^"']+)["']/);
+          if (match && match[1]) {
+            currentToken = match[1];
+            setComposeToken(currentToken);
           }
-          return undefined;
-        };
+        }
 
-        const batteryVal = findValue(data, ['percentage', 'level', 'battery', 'soc', 'battery_level']);
-        const tempVal = findValue(data, ['temperature', 'temp', 'cpu_temp', 'cpu_temperature', 'thermal']);
+        // 2. Try the actual API endpoints used by Compose
+        // Common Compose API path: /webapi/1.0/get/package/key/token
+        const apiEndpoints = [
+          `/duckiebot-api/webapi/1.0/get/duckietown/battery/${currentToken}`,
+          `/duckiebot-api/webapi/1.0/get/duckietown/temperature/${currentToken}`,
+          `/duckiebot-api/api/1.0/robot/info`
+        ];
+
+        let batteryVal = null;
+        let tempVal = null;
+
+        for (const url of apiEndpoints) {
+          try {
+            const res = await axios.get(url, { timeout: 1000 });
+            const data = res.data;
+            
+            // Recursive search for values
+            const findValue = (obj: any, keys: string[]): any => {
+              if (!obj || typeof obj !== 'object') return undefined;
+              for (const key in obj) {
+                if (keys.includes(key.toLowerCase())) return obj[key];
+                if (typeof obj[key] === 'object') {
+                  const found = findValue(obj[key], keys);
+                  if (found !== undefined) return found;
+                }
+              }
+              return undefined;
+            };
+
+            if (batteryVal === null) batteryVal = findValue(data, ['percentage', 'level', 'battery', 'soc', 'value']);
+            if (tempVal === null) tempVal = findValue(data, ['temperature', 'temp', 'cpu_temp', 'value']);
+            
+            if (batteryVal !== null && tempVal !== null) break;
+          } catch (e) { /* continue */ }
+        }
+
+        setRawData(`Token: ${currentToken || 'Suche...'}\nBatterie: ${batteryVal || '?'}\nTemp: ${tempVal || '?'}`);
         
         setSensorData({
-          battery: typeof batteryVal === 'number' ? batteryVal : (parseFloat(batteryVal) || null),
-          temp: typeof tempVal === 'number' ? tempVal : (parseFloat(tempVal) || null),
+          battery: batteryVal !== null ? Number(batteryVal) : null,
+          temp: tempVal !== null ? Number(tempVal) : null,
           speed: currentDirection === 'stop' ? 0 : Math.round(velocity * 0.38),
           mcpLatency: 12,
           yoloStatus: 'ACTIVE',
           gemmaStatus: 'READY'
         });
       } catch (error) {
-        console.error('Failed to fetch sensor data from /api/1.0/robot/info, trying fallback...', error);
-        
-        // Fallback: Try the original URL but expect it might be HTML
-        try {
-          const response = await axios.get(`/duckiebot-api/dashboard/robot/info`, { timeout: 2000 });
-          if (typeof response.data === 'string' && response.data.includes('<!DOCTYPE html>')) {
-            setRawData("Bot liefert HTML statt JSON. API-Endpunkt wird gesucht...");
-          } else {
-            setRawData(JSON.stringify(response.data, null, 2));
-          }
-        } catch (e) {
-          setRawData("Bot nicht erreichbar (IP: 172.18.40.182)");
-        }
-
+        console.error('Failed to fetch sensor data:', error);
+        setRawData("Verbindung zum Bot fehlgeschlagen");
         setSensorData({
           battery: null,
           temp: null,
@@ -113,7 +129,7 @@ export default function Home() {
 
     const interval = setInterval(fetchSensorData, 2000);
     return () => clearInterval(interval);
-  }, [rageMode, velocity, currentDirection]);
+  }, [rageMode, velocity, currentDirection, composeToken]);
 
   // Handle RAGE MODE activation
   const handleRageModeToggle = () => {
