@@ -241,12 +241,18 @@ export default defineConfig({
       '/duckiebot-api': {
         target: 'http://172.18.40.182',
         changeOrigin: true,
+        headers: {
+          Host: 'duckiebot207.local'
+        },
         rewrite: (path) => path.replace(/^\/duckiebot-api/, ''),
         secure: false,
       },
       '/duckiebot-stream': {
         target: 'http://172.18.40.182:8080',
         changeOrigin: true,
+        headers: {
+          Host: 'duckiebot207.local'
+        },
         rewrite: (path) => path.replace(/^\/duckiebot-stream/, ''),
         secure: false,
         ws: true,
