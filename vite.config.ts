@@ -239,13 +239,13 @@ export default defineConfig({
     },
     proxy: {
       '/duckiebot-api': {
-        target: 'http://duckiebot207.local',
+        target: 'http://172.18.40.182',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/duckiebot-api/, ''),
         secure: false,
       },
       '/duckiebot-stream': {
-        target: 'http://duckiebot207.local:8080',
+        target: 'http://172.18.40.182:8080',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/duckiebot-stream/, ''),
         secure: false,

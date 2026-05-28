@@ -55,13 +55,11 @@ export default function Home() {
   useEffect(() => {
     const fetchSensorData = async () => {
       try {
-        // Fetch battery and other info via the local proxy to avoid CORS issues
-        const response = await axios.get(`/duckiebot-api/dashboard/robot/info`);
+        // Try to fetch JSON data from the API endpoint
+        // Based on Duckietown Compose, the API is often under /api/1.0/
+        const response = await axios.get(`/duckiebot-api/api/1.0/robot/info`, { timeout: 2000 });
         const data = response.data;
         setRawData(JSON.stringify(data, null, 2));
-        
-        // DEBUG: Log the raw data to the browser console
-        console.log('DUCKIEBOT RAW DATA:', data);
         
         // Recursive search for values in the object
         const findValue = (obj: any, keys: string[]): any => {
@@ -88,8 +86,20 @@ export default function Home() {
           gemmaStatus: 'READY'
         });
       } catch (error) {
-        console.error('Failed to fetch sensor data:', error);
-        setRawData("Fehler beim Abrufen der Daten");
+        console.error('Failed to fetch sensor data from /api/1.0/robot/info, trying fallback...', error);
+        
+        // Fallback: Try the original URL but expect it might be HTML
+        try {
+          const response = await axios.get(`/duckiebot-api/dashboard/robot/info`, { timeout: 2000 });
+          if (typeof response.data === 'string' && response.data.includes('<!DOCTYPE html>')) {
+            setRawData("Bot liefert HTML statt JSON. API-Endpunkt wird gesucht...");
+          } else {
+            setRawData(JSON.stringify(response.data, null, 2));
+          }
+        } catch (e) {
+          setRawData("Bot nicht erreichbar (IP: 172.18.40.182)");
+        }
+
         setSensorData({
           battery: null,
           temp: null,
