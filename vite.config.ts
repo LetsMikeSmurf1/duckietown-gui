@@ -242,11 +242,14 @@ export default defineConfig({
         target: 'http://duckiebot207.local',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/duckiebot-api/, ''),
+        secure: false,
       },
       '/duckiebot-stream': {
         target: 'http://duckiebot207.local:8080',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/duckiebot-stream/, ''),
+        secure: false,
+        ws: true,
       }
     }
   },

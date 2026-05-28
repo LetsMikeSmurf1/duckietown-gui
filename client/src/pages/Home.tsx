@@ -47,6 +47,7 @@ export default function Home() {
     gemmaStatus: 'READY'
   });
   const [currentDirection, setCurrentDirection] = useState<'forward' | 'backward' | 'left' | 'right' | 'stop'>('stop');
+  const [rawData, setRawData] = useState<string>("");
   const bodyRef = useRef<HTMLDivElement>(null);
   const rageIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -57,13 +58,26 @@ export default function Home() {
         // Fetch battery and other info via the local proxy to avoid CORS issues
         const response = await axios.get(`/duckiebot-api/dashboard/robot/info`);
         const data = response.data;
+        setRawData(JSON.stringify(data, null, 2));
         
         // DEBUG: Log the raw data to the browser console
         console.log('DUCKIEBOT RAW DATA:', data);
         
-        // Robust parsing: try different possible field names
-        const batteryVal = data.battery?.percentage ?? data.battery?.level ?? data.battery_level ?? data.battery ?? null;
-        const tempVal = data.temperature ?? data.temp ?? data.cpu_temp ?? data.thermal?.cpu ?? null;
+        // Recursive search for values in the object
+        const findValue = (obj: any, keys: string[]): any => {
+          if (!obj || typeof obj !== 'object') return undefined;
+          for (const key in obj) {
+            if (keys.includes(key.toLowerCase())) return obj[key];
+            if (typeof obj[key] === 'object') {
+              const found = findValue(obj[key], keys);
+              if (found !== undefined) return found;
+            }
+          }
+          return undefined;
+        };
+
+        const batteryVal = findValue(data, ['percentage', 'level', 'battery', 'soc', 'battery_level']);
+        const tempVal = findValue(data, ['temperature', 'temp', 'cpu_temp', 'cpu_temperature', 'thermal']);
         
         setSensorData({
           battery: typeof batteryVal === 'number' ? batteryVal : (parseFloat(batteryVal) || null),
@@ -75,7 +89,7 @@ export default function Home() {
         });
       } catch (error) {
         console.error('Failed to fetch sensor data:', error);
-        // Set to null if real data fails - NO FAKE DATA
+        setRawData("Fehler beim Abrufen der Daten");
         setSensorData({
           battery: null,
           temp: null,
@@ -311,6 +325,17 @@ export default function Home() {
 
       {/* Bottom sensor bar */}
       <BottomBar sensorData={sensorData} rageMode={rageMode} />
+
+      {/* Debug Overlay - Only visible if data is missing */}
+      {(sensorData.battery === null || sensorData.temp === null) && (
+        <div className="fixed bottom-24 right-4 p-4 bg-black/90 text-green-500 text-[10px] font-mono rounded max-w-xs overflow-auto max-h-40 border border-green-500/30 z-50 shadow-2xl">
+          <div className="font-bold mb-1 border-b border-green-500/30 pb-1 flex justify-between">
+            <span>DEBUG: RAW BOT DATA</span>
+            <span className="animate-pulse">●</span>
+          </div>
+          <pre className="whitespace-pre-wrap">{rawData || "Warte auf Daten..."}</pre>
+        </div>
+      )}
     </div>
   );
 }
