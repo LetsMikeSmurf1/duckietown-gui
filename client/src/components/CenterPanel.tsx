@@ -24,14 +24,12 @@ export default function CenterPanel({
   const [streamError, setStreamError] = useState(false);
   const [streamUrlIndex, setStreamUrlIndex] = useState(0);
   
-  // Common Duckiebot stream URLs to try
+  // Use local proxy for the camera stream to avoid CORS and mixed content issues
   const streamUrls = [
+    `/duckiebot-stream/camera/stream`,
+    `/duckiebot-api/camera/stream`,
     `http://${DUCKIEBOT_HOSTNAME}:8080/camera/stream`,
-    `http://${DUCKIEBOT_HOSTNAME}/camera/stream`,
-    `http://${DUCKIEBOT_IP}:8080/camera/stream`,
-    `http://${DUCKIEBOT_IP}/camera/stream`,
-    `http://${DUCKIEBOT_HOSTNAME}:5000/video_feed`,
-    `http://${DUCKIEBOT_HOSTNAME}:8080/stream?topic=/duckiebot/camera_node/image/compressed`
+    `http://${DUCKIEBOT_IP}:8080/camera/stream`
   ];
 
   const currentStreamUrl = streamUrls[streamUrlIndex];

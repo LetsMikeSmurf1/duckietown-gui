@@ -54,8 +54,8 @@ export default function Home() {
   useEffect(() => {
     const fetchSensorData = async () => {
       try {
-        // Fetch battery and other info from the dashboard API
-        const response = await axios.get(`http://${DUCKIEBOT_HOSTNAME}/dashboard/robot/info`);
+        // Fetch battery and other info via the local proxy to avoid CORS issues
+        const response = await axios.get(`/duckiebot-api/dashboard/robot/info`);
         const data = response.data;
         
         setSensorData({
@@ -219,15 +219,8 @@ export default function Home() {
         case 'stop': v = 0; omega = 0; break;
       }
 
-      // Try multiple common Duckiebot control endpoints
-      const endpoints = [
-        `http://${DUCKIEBOT_HOSTNAME}:8080/motors/set`,
-        `http://${DUCKIEBOT_HOSTNAME}/api/motors/set`,
-        `http://${DUCKIEBOT_IP}:8080/motors/set`
-      ];
-
-      // We'll try the first one and log if it fails
-      await axios.get(endpoints[0], {
+      // Send movement command via proxy
+      await axios.get(`/duckiebot-stream/motors/set`, {
         params: { v, omega },
         timeout: 500
       });

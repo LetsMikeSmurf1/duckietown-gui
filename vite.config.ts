@@ -237,5 +237,17 @@ export default defineConfig({
       strict: true,
       deny: ["**/.*"],
     },
+    proxy: {
+      '/duckiebot-api': {
+        target: 'http://duckiebot207.local',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/duckiebot-api/, ''),
+      },
+      '/duckiebot-stream': {
+        target: 'http://duckiebot207.local:8080',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/duckiebot-stream/, ''),
+      }
+    }
   },
 });
