@@ -67,23 +67,26 @@ export default function Home() {
           }
         }
 
-        // 2. Try the actual API endpoints used by Compose
-        // Common Compose API path: /webapi/1.0/get/package/key/token
-        const apiEndpoints = [
-          `/duckiebot-api/webapi/1.0/get/duckietown/battery/${currentToken}`,
-          `/duckiebot-api/webapi/1.0/get/duckietown/temperature/${currentToken}`,
-          `/duckiebot-api/api/1.0/robot/info`
+        // 2. Comprehensive Scan of possible API endpoints
+        const scanTargets = [
+          { name: 'Compose Battery', url: `/duckiebot-api/webapi/1.0/get/duckietown/battery/${currentToken}` },
+          { name: 'Compose Temp', url: `/duckiebot-api/webapi/1.0/get/duckietown/temperature/${currentToken}` },
+          { name: 'Robot Info', url: `/duckiebot-api/api/1.0/robot/info` },
+          { name: 'Health', url: `/duckiebot-api/dashboard/robot/health` },
+          { name: 'Stats', url: `/duckiebot-api/dashboard/robot/stats` },
+          { name: 'Direct Battery', url: `/duckiebot-api/webapi/1.0/get/core/battery/${currentToken}` },
+          { name: 'Direct Temp', url: `/duckiebot-api/webapi/1.0/get/core/temperature/${currentToken}` }
         ];
 
         let batteryVal = null;
         let tempVal = null;
+        let debugLog = `Token: ${currentToken}\n\nSCAN RESULTS:\n`;
 
-        for (const url of apiEndpoints) {
+        for (const target of scanTargets) {
           try {
-            const res = await axios.get(url, { timeout: 1000 });
+            const res = await axios.get(target.url, { timeout: 800 });
             const data = res.data;
             
-            // Recursive search for values
             const findValue = (obj: any, keys: string[]): any => {
               if (!obj || typeof obj !== 'object') return undefined;
               for (const key in obj) {
@@ -96,14 +99,19 @@ export default function Home() {
               return undefined;
             };
 
-            if (batteryVal === null) batteryVal = findValue(data, ['percentage', 'level', 'battery', 'soc', 'value']);
-            if (tempVal === null) tempVal = findValue(data, ['temperature', 'temp', 'cpu_temp', 'value']);
+            const b = findValue(data, ['percentage', 'level', 'battery', 'soc', 'value']);
+            const t = findValue(data, ['temperature', 'temp', 'cpu_temp', 'value']);
             
-            if (batteryVal !== null && tempVal !== null) break;
-          } catch (e) { /* continue */ }
+            if (b !== undefined && batteryVal === null) batteryVal = b;
+            if (t !== undefined && tempVal === null) tempVal = t;
+            
+            debugLog += `✅ ${target.name}: OK\n`;
+          } catch (e) {
+            debugLog += `❌ ${target.name}: Fail\n`;
+          }
         }
 
-        setRawData(`Token: ${currentToken || 'Suche...'}\nBatterie: ${batteryVal || '?'}\nTemp: ${tempVal || '?'}`);
+        setRawData(debugLog + `\nResult: B=${batteryVal || '?'} T=${tempVal || '?'}`);
         
         setSensorData({
           battery: batteryVal !== null ? Number(batteryVal) : null,
