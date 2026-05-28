@@ -58,9 +58,16 @@ export default function Home() {
         const response = await axios.get(`/duckiebot-api/dashboard/robot/info`);
         const data = response.data;
         
+        // DEBUG: Log the raw data to the browser console
+        console.log('DUCKIEBOT RAW DATA:', data);
+        
+        // Robust parsing: try different possible field names
+        const batteryVal = data.battery?.percentage ?? data.battery?.level ?? data.battery_level ?? data.battery ?? null;
+        const tempVal = data.temperature ?? data.temp ?? data.cpu_temp ?? data.thermal?.cpu ?? null;
+        
         setSensorData({
-          battery: data.battery?.percentage ?? null,
-          temp: data.temperature ?? null,
+          battery: typeof batteryVal === 'number' ? batteryVal : (parseFloat(batteryVal) || null),
+          temp: typeof tempVal === 'number' ? tempVal : (parseFloat(tempVal) || null),
           speed: currentDirection === 'stop' ? 0 : Math.round(velocity * 0.38),
           mcpLatency: 12,
           yoloStatus: 'ACTIVE',
